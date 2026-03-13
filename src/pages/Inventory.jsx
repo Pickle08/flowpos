@@ -3,6 +3,7 @@ import { supabase } from "../services/supabaseClient";
 
 export default function Inventory() {
     const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState(""); // State baru untuk pencarian
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
@@ -55,13 +56,15 @@ export default function Inventory() {
         if (!formData.name || !formData.barcode)
             return alert("Nama dan Barcode wajib diisi!");
 
+        setLoading(true); // Mulai loading
         try {
             const payload = {
                 name: formData.name,
                 barcode: formData.barcode,
-                price: Number(formData.price),
-                stock: Number(formData.stock),
-                category_id: formData.category_id,
+                price: Number(formData.price) || 0,
+                stock: Number(formData.stock) || 0,
+                // Jika category_id kosong, kirim null agar tidak error di database
+                category_id: formData.category_id || null,
             };
 
             const { error } = editingId
@@ -73,10 +76,19 @@ export default function Inventory() {
 
             if (error) throw error;
 
+            alert(
+                editingId
+                    ? "Produk berhasil diperbarui!"
+                    : "Produk berhasil ditambah!"
+            );
+
             resetForm();
+            setEditingId(null); // Penting! Kembalikan ke mode tambah setelah edit selesai
             fetchProducts();
         } catch (err) {
             alert("Gagal menyimpan data: " + err.message);
+        } finally {
+            setLoading(false); // Matikan loading apa pun hasilnya
         }
     };
 
@@ -159,8 +171,15 @@ export default function Inventory() {
                 </div>
                 <button
                     onClick={handleSubmit}
-                    className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-all">
-                    {editingId ? "Update Produk" : "Simpan Produk"}
+                    disabled={loading} // Cegah klik ganda
+                    className={`... ${
+                        loading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}>
+                    {loading
+                        ? "Memproses..."
+                        : editingId
+                        ? "Update Produk"
+                        : "Simpan Produk"}
                 </button>
             </div>
 
